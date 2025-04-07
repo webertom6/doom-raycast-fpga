@@ -55,16 +55,18 @@ architecture Behavioral of game1 is
     -- v_length (666): Total number of lines per frame, including visible lines and blanking periods.
     constant v_length : integer := 666;
 
-	signal B , YBT, SLCT, STRT, UP, DOWN, L, R, ABT, XBT, LBT, RBT : std_logic;
+	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
 
-	-- Creates a row=5xcol=4 array for a number pad
-	type matrix_type is array (0 to 4, 0 to 3) of integer range 0 to 1;
+	-- Creates a row=7xcol=8 array for a number pad
+	type matrix_type is array (0 to 6, 0 to 7) of integer range 0 to 1;
     signal my_matrix : matrix_type := (
-		(0, 1, 0, 0), -- Row 0
-		(0, 0, 0, 1), -- Row 1
-		(0, 1, 0, 1), -- Row 2
-		(0, 0, 0, 0), -- Row 3
-		(0, 0, 0, 1)  -- Row 4
+		(1, 1, 1, 1, 1, 1, 1, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 0, 1, 1, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 1, 1, 1, 1, 1, 1, 1)
     );
 
 begin
@@ -74,10 +76,10 @@ begin
 	YBT		<=	CTRL(1);
 	SLCT	<=	CTRL(2);
 	STRT	<=	CTRL(3);
-	UP		<=	CTRL(4);
-	DOWN 	<=	CTRL(5);
-	L		<=	CTRL(6);
-	R		<=	CTRL(7);
+	UP_CROSS		<=	CTRL(4);
+	DOWN_CROSS 	<=	CTRL(5);
+	LEFT_CROSS	<=	CTRL(6);
+	RIGHT_CROSS	<=	CTRL(7);
 	ABT		<=	CTRL(8);
 	XBT		<=	CTRL(9);
 	LBT		<=	CTRL(10);
@@ -85,10 +87,21 @@ begin
 	
 	vga_square: process
 
+	-- matrix printing variables
 	variable idx_row : integer range 0 to 4 := 0;
 	variable idx_col : integer range 0 to 3 := 0;
-	variable step_row : integer range 0 to 100 := 100;
+	variable step_row : integer range 0 to 100 := 50;
+
+	variable map_size : integer range 0 to 250 := 200;
+	variable cell_size : integer range 0 to 100 := 28;
+
 	variable value_matrix : integer range 0 to 1 := 0;
+
+	-- player variables
+	variable player_x : integer range 0 to 80 := 35; -- Scaled by 10 to represent 3.5
+	variable player_y : integer range 0 to 70 := 35; -- Scaled by 10 to represent 3.5
+	variable player_angle : real range 0.0 to 360.0 := 0.0;
+
 	begin
 		wait until rising_edge(CLK_50);
 
@@ -108,35 +121,50 @@ begin
 			color <= "000000001111"; -- background color
 
 
-			if(UP = '1') then
-				color <= "111111111111"; -- background color
+			if(UP_CROSS = '1') then
+				player_y := player_y - 1; -- Adjusted for scaling
 			end if;
 
-			if(DOWN = '1') then
-				color <= "000000000000"; -- background color
+			if(DOWN_CROSS = '1') then
+				player_y := player_y + 1; -- Adjusted for scaling
+			end if;
+
+			if(LEFT_CROSS = '1') then
+				player_x := player_x - 1; -- Adjusted for scaling
+			end if;
+			if(RIGHT_CROSS = '1') then
+				player_x := player_x + 1; -- Adjusted for scaling
 			end if;
 
 			--color <= "000000000000"; -- background color
 			-- color <= "111111111111"; -- background color
 
 
-			for i in 0 to 4 loop
+			for i in 0 to 6 loop
 				
-				for j in 0 to 3 loop
+				for j in 0 to 7 loop
 						--Generate square
 						-- v_cnt >= v_back_porch + x : starting vertical equals x pixels after the back porch, back porch is the "inactive" area before the active display area.
 						-- v_cnt <= v_back_porch + y : ending vertical equals y pixels after the back porch.
 						-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
 						-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
 						-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
-						if ( (v_cnt >= v_back_porch + 10 + i * step_row) AND (v_cnt <= v_back_porch + 100  + i * step_row)
-						AND (h_cnt >= h_back_porch + 10 + j * step_row ) AND (h_cnt <= h_back_porch + 100 + j * step_row)) then
+						if ( (v_cnt >= v_back_porch + 0 + i * cell_size) AND (v_cnt <= v_back_porch + cell_size  + i * cell_size)
+						AND (h_cnt >= h_back_porch + 0 + j * cell_size ) AND (h_cnt <= h_back_porch + cell_size + j * cell_size)) then
 							-- Assign the value of the matrix to the variable value_matrix
 							-- value_matrix := my_matrix(i,j);
 							-- if (value_matrix = 1) then
-							if (my_matrix(i,j) = 1) then
-								color <= "111100000000"; -- red
-							else
+							if (my_matrix(i,j) = 0) then
+								color <= "000000000000"; -- red
+								else
+								color <= "111111111111"; -- green
+							end if;
+
+							-- Draw the player as a green circle
+							if ( (v_cnt >= v_back_porch + (player_y * cell_size) / 10 - cell_size / 2) AND 
+								 (v_cnt <= v_back_porch + (player_y * cell_size) / 10 + cell_size / 2) AND 
+								 (h_cnt >= h_back_porch + (player_x * cell_size) / 10 - cell_size / 2) AND 
+								 (h_cnt <= h_back_porch + (player_x * cell_size) / 10 + cell_size / 2) ) then
 								color <= "000011110000"; -- green
 							end if;
 						end if;
