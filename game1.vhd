@@ -5,14 +5,19 @@ use ieee.std_logic_UNSIGNED.ALL;
 
 entity game1 is port 
 	( 
+		-- DISPLAY SIGNALS
 		CLK_50 : in std_logic;	
 		RED: out std_logic_vector(3 downto 0);
 		GREEN: out std_logic_vector(3 downto 0);  
 		BLUE: out std_logic_vector(3 downto 0); 			
 		SYNC: out std_logic_vector(1 downto 0);
 
-		CTRL 				: in std_logic_vector(11 downto 0)
+		-- SNES CONTROLLER SIGNALS
+		CTRL : in std_logic_vector(11 downto 0);
 
+		-- PLAYER SIGNALS
+		X	: in integer range 0 to 80;
+		Y	: in integer range 0 to 70
 	);
 end game1;
 
@@ -69,6 +74,13 @@ architecture Behavioral of game1 is
 		(1, 1, 1, 1, 1, 1, 1, 1)
     );
 
+	-- Creates a row=600xcol=800 array for a number pad
+	type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
+	signal my_matrix2 : matrix_type2 := (
+		others => (others => 0)
+	);
+	
+
 begin
 	video_en <= horizontal_en AND vertical_en;
 
@@ -97,10 +109,9 @@ begin
 
 	variable value_matrix : integer range 0 to 1 := 0;
 
-	-- player variables
 	variable player_x : integer range 0 to 80 := 35; -- Scaled by 10 to represent 3.5
 	variable player_y : integer range 0 to 70 := 35; -- Scaled by 10 to represent 3.5
-	variable player_angle : real range 0.0 to 360.0 := 0.0;
+
 
 	begin
 		wait until rising_edge(CLK_50);
@@ -120,21 +131,8 @@ begin
 
 			color <= "000000001111"; -- background color
 
-
-			if(UP_CROSS = '1') then
-				player_y := player_y - 1; -- Adjusted for scaling
-			end if;
-
-			if(DOWN_CROSS = '1') then
-				player_y := player_y + 1; -- Adjusted for scaling
-			end if;
-
-			if(LEFT_CROSS = '1') then
-				player_x := player_x - 1; -- Adjusted for scaling
-			end if;
-			if(RIGHT_CROSS = '1') then
-				player_x := player_x + 1; -- Adjusted for scaling
-			end if;
+			player_x := X; -- Get the player's X position from the player entity
+			player_y := Y; -- Get the player's Y position from the player entity
 
 			--color <= "000000000000"; -- background color
 			-- color <= "111111111111"; -- background color
