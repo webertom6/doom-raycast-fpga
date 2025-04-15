@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.std_logic_ARITH.ALL;
 use ieee.std_logic_UNSIGNED.ALL;
+use work.shared_types.all;
 
 entity game1 is port 
 	( 
@@ -15,9 +16,7 @@ entity game1 is port
 		-- SNES CONTROLLER SIGNALS
 		CTRL : in std_logic_vector(11 downto 0);
 
-		-- PLAYER SIGNALS
-		X	: in integer range 0 to 80;
-		Y	: in integer range 0 to 70
+		INPUT_MATRIX_SCREEN  : in  matrix_screen
 	);
 end game1;
 
@@ -63,22 +62,43 @@ architecture Behavioral of game1 is
 	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
 
 	-- Creates a row=7xcol=8 array for a number pad
-	type matrix_type is array (0 to 6, 0 to 7) of integer range 0 to 1;
-    signal my_matrix : matrix_type := (
-		(1, 1, 1, 1, 1, 1, 1, 1),
-		(1, 0, 0, 0, 0, 0, 0, 1),
-		(1, 0, 1, 1, 1, 0, 0, 1),
-		(1, 0, 1, 0, 1, 0, 0, 1),
-		(1, 0, 1, 0, 1, 0, 0, 1),
-		(1, 0, 0, 0, 0, 0, 0, 1),
-		(1, 1, 1, 1, 1, 1, 1, 1)
-    );
+	-- type matrix_type is array (0 to 6, 0 to 7) of integer range 0 to 1;
+    -- signal my_matrix : matrix_grid := (
+	-- 	(1, 1, 1, 1, 1, 1, 1, 1),
+	-- 	(1, 0, 0, 0, 0, 0, 0, 1),
+	-- 	(1, 0, 1, 1, 1, 0, 0, 1),
+	-- 	(1, 0, 1, 0, 1, 0, 0, 1),
+	-- 	(1, 0, 1, 0, 1, 0, 0, 1),
+	-- 	(1, 0, 0, 0, 0, 0, 0, 1),
+	-- 	(1, 1, 1, 1, 1, 1, 1, 1)
+    -- );
 
 	-- Creates a row=600xcol=800 array for a number pad
-	type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
-	signal my_matrix2 : matrix_type2 := (
-		others => (others => 0)
+	-- type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
+	signal my_matrix2 : matrix_screen := (
+		others => (others => 1)
 	);
+
+	type color_lut_type is array (0 to 4) of std_logic_vector(11 downto 0);
+	constant color_lut : color_lut_type := (
+		0  => "111111111111", -- White
+		1  => "000000000000", -- Black
+		2  => "111100000000", -- Red
+		3  => "000011110000", -- Green
+		4  => "000000001111" -- Blue
+		-- 3  => "000011111111", -- Cyan
+		-- 5  => "111100001111", -- Magenta
+		-- 6  => "111111110000", -- Yellow
+		-- 8  => "100000000000", -- Dark Red
+		-- 9  => "000010000000", -- Dark Green
+		-- 10 => "000000001000", -- Dark Blue
+		-- 11 => "111111000000", -- Orange
+		-- 12 => "001111111000", -- Light Cyan
+		-- 13 => "100010000100", -- Pink
+		-- 14 => "000111100111", -- Teal
+		-- 15 => "011001100110"  -- Gray
+	);
+
 	
 
 begin
@@ -116,60 +136,62 @@ begin
 	begin
 		wait until rising_edge(CLK_50);
 
-			-- case state is
-			-- 	when draw_background =>
-			-- 		color <= "000000001111"; -- Background color
-			-- 		if ( (v_cnt >= v_back_porch + 200) AND (v_cnt <= v_back_porch + 400) AND 
-			-- 			(h_cnt >= h_back_porch + 300) AND (h_cnt <= h_back_porch + 500) ) then
-			-- 			state <= draw_square;
-			-- 		end if;
-					
-			-- 	when draw_square =>
-			-- 		color <= "111100000000"; -- Square color
-			-- 		state <= draw_background; -- Transition back to background
-			-- end case;
 
 			color <= "000000001111"; -- background color
 
-			player_x := X; -- Get the player's X position from the player entity
-			player_y := Y; -- Get the player's Y position from the player entity
-
-			--color <= "000000000000"; -- background color
-			-- color <= "111111111111"; -- background color
-
-
-			for i in 0 to 6 loop
-				
-				for j in 0 to 7 loop
-						--Generate square
-						-- v_cnt >= v_back_porch + x : starting vertical equals x pixels after the back porch, back porch is the "inactive" area before the active display area.
-						-- v_cnt <= v_back_porch + y : ending vertical equals y pixels after the back porch.
-						-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
-						-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
-						-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
-						if ( (v_cnt >= v_back_porch + 0 + i * cell_size) AND (v_cnt <= v_back_porch + cell_size  + i * cell_size)
-						AND (h_cnt >= h_back_porch + 0 + j * cell_size ) AND (h_cnt <= h_back_porch + cell_size + j * cell_size)) then
-							-- Assign the value of the matrix to the variable value_matrix
-							-- value_matrix := my_matrix(i,j);
-							-- if (value_matrix = 1) then
-							if (my_matrix(i,j) = 0) then
-								color <= "000000000000"; -- red
-								else
-								color <= "111111111111"; -- green
-							end if;
-
-							-- Draw the player as a green circle
-							if ( (v_cnt >= v_back_porch + (player_y * cell_size) / 10 - cell_size / 2) AND 
-								 (v_cnt <= v_back_porch + (player_y * cell_size) / 10 + cell_size / 2) AND 
-								 (h_cnt >= h_back_porch + (player_x * cell_size) / 10 - cell_size / 2) AND 
-								 (h_cnt <= h_back_porch + (player_x * cell_size) / 10 + cell_size / 2) ) then
-								color <= "000011110000"; -- green
-							end if;
-						end if;
+			for i in 0 to 599 loop
+				for j in 0 to 799 loop
 					
-					end loop;
+					color <= color_lut(INPUT_MATRIX_SCREEN(i,j));
+					
+				end loop;
 				
-			end loop ; -- 	
+			end loop ; --
+
+			-- player_x := X; -- Get the player's X position from the player entity
+			-- player_y := Y; -- Get the player's Y position from the player entity
+
+			-- --Generate square
+			-- if ( (v_cnt >= v_back_porch + 10) AND (v_cnt <= v_back_porch + v_active - 10)
+			-- AND (h_cnt >= h_back_porch + 1) AND (h_cnt <= h_back_porch + h_active - 50)) then
+			-- 	color <= "111100000000"; -- square color
+			-- end if;
+
+
+			-- for i in 0 to 6 loop
+				
+			-- 	for j in 0 to 7 loop
+			-- 			--Generate square
+			-- 			-- v_cnt >= v_back_porch + x : starting vertical equals x pixels after the back porch, back porch is the "inactive" area before the active display area.
+			-- 			-- v_cnt <= v_back_porch + y : ending vertical equals y pixels after the back porch.
+			-- 			-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
+			-- 			-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
+			-- 			-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
+			-- 			if ( (v_cnt >= v_back_porch + 0 + i * cell_size) AND (v_cnt <= v_back_porch + cell_size  + i * cell_size)
+			-- 			AND (h_cnt >= h_back_porch + 0 + j * cell_size ) AND (h_cnt <= h_back_porch + cell_size + j * cell_size)) then
+			-- 				-- Assign the value of the matrix to the variable value_matrix
+			-- 				-- value_matrix := my_matrix(i,j);
+			-- 				-- if (value_matrix = 1) then
+			-- 				-- if (my_matrix(i,j) = 0) then
+			-- 				-- 	color <= "000000000000"; -- red
+			-- 				-- 	else
+			-- 				-- 	color <= "111111111111"; -- green
+			-- 				-- end if;
+
+			-- 				color <= color_lut(INPUT_MATRIX_MAP(i,j)); -- Assign color based on the matrix value
+
+			-- 				-- Draw the player as a green circle
+			-- 				if ( (v_cnt >= v_back_porch + (player_y * cell_size) / 10 - cell_size / 2) AND 
+			-- 					 (v_cnt <= v_back_porch + (player_y * cell_size) / 10 + cell_size / 2) AND 
+			-- 					 (h_cnt >= h_back_porch + (player_x * cell_size) / 10 - cell_size / 2) AND 
+			-- 					 (h_cnt <= h_back_porch + (player_x * cell_size) / 10 + cell_size / 2) ) then
+			-- 					color <= "000011110000"; -- green
+			-- 				end if;
+			-- 			end if;
+					
+			-- 		end loop;
+				
+			-- end loop ; -- 	
 
 
 
