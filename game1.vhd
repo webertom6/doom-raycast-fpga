@@ -75,10 +75,10 @@ architecture Behavioral of game1 is
     );
 
 	-- Creates a row=600xcol=800 array for a number pad
-	type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
-	signal my_matrix2 : matrix_type2 := (
-		others => (others => 0)
-	);
+	-- type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
+	-- signal my_matrix2 : matrix_type2 := (
+	-- 	others => (others => 0)
+	-- );
 	
 
 begin
@@ -105,12 +105,12 @@ begin
 	variable step_row : integer range 0 to 100 := 50;
 
 	variable map_size : integer range 0 to 250 := 200;
-	variable cell_size : integer range 0 to 100 := 28;
+	variable cell_size : integer range 0 to 100 := 14;
 
 	variable value_matrix : integer range 0 to 1 := 0;
 
-	variable player_x : integer range 0 to 80 := 35; -- Scaled by 10 to represent 3.5
-	variable player_y : integer range 0 to 70 := 35; -- Scaled by 10 to represent 3.5
+	variable player_x : integer range 0 to 800 := 35; -- Scaled by 10 to represent 3.5
+	variable player_y : integer range 0 to 700 := 35; -- Scaled by 10 to represent 3.5
 
 
 	begin
@@ -137,6 +137,11 @@ begin
 			--color <= "000000000000"; -- background color
 			-- color <= "111111111111"; -- background color
 
+			if ( (v_cnt >= v_back_porch + 10) AND (v_cnt <= v_back_porch + 500 - 10)
+				AND (h_cnt >= h_back_porch + 10) AND (h_cnt <= h_back_porch + h_active - 10)) then
+				color <= "111100000000"; -- square color
+			end if;
+
 
 			for i in 0 to 6 loop
 				
@@ -147,8 +152,8 @@ begin
 						-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
 						-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
 						-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
-						if ( (v_cnt >= v_back_porch + 0 + i * cell_size) AND (v_cnt <= v_back_porch + cell_size  + i * cell_size)
-						AND (h_cnt >= h_back_porch + 0 + j * cell_size ) AND (h_cnt <= h_back_porch + cell_size + j * cell_size)) then
+						if ( (v_cnt >= v_back_porch + 500 + i * cell_size) AND (v_cnt <= v_back_porch + 500 + cell_size  + i * cell_size)
+						AND (h_cnt >= h_back_porch + 10 + j * cell_size ) AND (h_cnt <= h_back_porch + 10 + cell_size + j * cell_size)) then
 							-- Assign the value of the matrix to the variable value_matrix
 							-- value_matrix := my_matrix(i,j);
 							-- if (value_matrix = 1) then
@@ -159,8 +164,8 @@ begin
 							end if;
 
 							-- Draw the player as a green circle
-							if ( (v_cnt >= v_back_porch + (player_y * cell_size) / 10 - cell_size / 2) AND 
-								 (v_cnt <= v_back_porch + (player_y * cell_size) / 10 + cell_size / 2) AND 
+							if ( (v_cnt >= v_back_porch + 500 + (player_y * cell_size) / 10 - cell_size / 2) AND 
+								 (v_cnt <= v_back_porch + 500 + (player_y * cell_size) / 10 + cell_size / 2) AND 
 								 (h_cnt >= h_back_porch + (player_x * cell_size) / 10 - cell_size / 2) AND 
 								 (h_cnt <= h_back_porch + (player_x * cell_size) / 10 + cell_size / 2) ) then
 								color <= "000011110000"; -- green
