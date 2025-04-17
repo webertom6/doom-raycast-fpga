@@ -19,7 +19,7 @@ port	(
 		-- DISPLAY SIGNALS
 		CLK_50 : in std_logic;	
 
-		INPUT_MATRIX_MAP  : in  matrix_grid;
+		INPUT_MATRIX_GRID  : in  matrix_grid;
         INPUT_MATRIX_SCREEN : in matrix_screen;
         OUTPUT_MATRIX_SCREEN : out matrix_screen := (others => (others => 0));
 
@@ -31,19 +31,35 @@ end entity screen;
 
 architecture screen_arch of screen is
 	--variables : 
-	signal screen : matrix_screen := (others => (others => 0));
-
-begin
-
 	
+	begin
+		
+		
 	update_map : process
-
-		begin
-
+		variable screen : matrix_screen := INPUT_MATRIX_SCREEN;
+	
+	begin
+		
 		wait until falling_edge(CLK_50);
 
+		for i in 0 to SCREEN_HEIGHT - 1 loop
+			for j in 0 to SCREEN_WIDTH - 1 loop
+				screen(i, j) := 3;
+			end loop;
+		end loop;
 
-		screen <= INPUT_MATRIX_SCREEN;
+		-- for row in 0 to 6 loop  -- INPUT_MATRIX_GRID has 7 rows
+		-- 	for col in 0 to 7 loop  -- INPUT_MATRIX_GRID has 8 columns
+		-- 		-- Calculate the starting pixel position in the screen matrix
+		-- 		for i in 0 to CELL_SIZE - 1 loop
+		-- 			for j in 0 to CELL_SIZE - 1 loop
+		-- 				screen(row * CELL_SIZE + i, col * CELL_SIZE + j) <= INPUT_MATRIX_GRID(row, col);
+		-- 			end loop;
+		-- 		end loop;
+		-- 	end loop;
+		-- end loop;
+
+
 
 		OUTPUT_MATRIX_SCREEN <= screen;
 

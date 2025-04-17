@@ -75,9 +75,9 @@ architecture Behavioral of game1 is
 
 	-- Creates a row=600xcol=800 array for a number pad
 	-- type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
-	signal my_matrix2 : matrix_screen := (
-		others => (others => 1)
-	);
+	-- signal my_matrix2 : matrix_screen := (
+	-- 	others => (others => 1)
+	-- );
 
 	type color_lut_type is array (0 to 4) of std_logic_vector(11 downto 0);
 	constant color_lut : color_lut_type := (

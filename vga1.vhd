@@ -93,7 +93,7 @@ begin
 				)
 	port map(	CLK_50 	=> CLK_50,
 
-				INPUT_MATRIX_MAP => grid,
+				INPUT_MATRIX_GRID => grid,
 				INPUT_MATRIX_SCREEN => start_screen,
 				OUTPUT_MATRIX_SCREEN => updated_screen,
 

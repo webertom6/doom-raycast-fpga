@@ -5,7 +5,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 package shared_types is
     type matrix_grid is array (0 to 6, 0 to 7) of integer range 0 to 1;
-	type matrix_screen is array (0 to 599, 0 to 799) of integer range 0 to 1;
+	type matrix_screen is array (0 to 599, 0 to 799) of integer range 0 to 15;
 end package;
 
 package body shared_types is
