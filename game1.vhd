@@ -6,10 +6,14 @@ use work.shared_types.all;
 
 entity game1 is 
 generic (
-		-- MAP SIZE
-		MAP_SIZE      : integer range 0 to 250;
-		-- CELL SIZE
-		CELL_SIZE     : integer range 0 to 100
+		-- GRID SIZE CELL SIZE
+		ROWS          : integer range 0 to 7;
+		COLS          : integer range 0 to 8;
+		GRID_SIZE      : integer range 0 to 250;
+		CELL_SIZE     : integer range 0 to 100;
+		-- SCREEN SIZE
+		SPACE_BORDER   : integer range 0 to 100; -- 10px border
+		INFO_HEIGHT    : integer range 0 to 100
 	);
 port ( 
 		-- DISPLAY SIGNALS
@@ -31,6 +35,8 @@ port (
 end game1;
 
 architecture Behavioral of game1 is    
+
+	------------------ VGA COMMUNICATION ------------------
     -- Sync Signals
     -- h_sync and v_sync: Signals that synchronize the monitor's scanning process.
     signal h_sync : std_logic;
@@ -43,8 +49,6 @@ architecture Behavioral of game1 is
     -- vertical_en: Indicates whether the current pixel is in the active visible area of the screen (vertically).
     signal vertical_en : std_logic;
     
-    -- Color Signals
-    signal color : std_logic_vector(11 downto 0) := (others => '0');
     
     -- Sync Counters
     -- h_cnt (Horizontal Counter): Keeps track of the horizontal position of the pixel being drawn.
@@ -68,10 +72,12 @@ architecture Behavioral of game1 is
     constant v_sync_length : integer := 6;
     -- v_length (666): Total number of lines per frame, including visible lines and blanking periods.
     constant v_length : integer := 666;
-
+	----------------------------------------------------------------------
+	
 	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
-
-
+	
+    -- Color Signals
+    signal color : std_logic_vector(11 downto 0) := (others => '0');
 
 	type color_lut_type is array (0 to 4) of std_logic_vector(11 downto 0);
 	constant color_lut : color_lut_type := (
@@ -93,9 +99,46 @@ architecture Behavioral of game1 is
 		-- 15 => "011001100110"  -- Gray
 	);
 	
+	-- Sprite heart dimensions
+	constant heart_sprite_width  : integer := 32;
+	constant heart_sprite_height : integer := 32;
+	constant nb2_sprite_width  : integer := 32;
+	constant nb2_sprite_height : integer := 32;
+
+	-- Sprite position
+	constant nb_hearts : integer := 3;
+	constant heart_sprite_x_start : integer := (h_active - heart_sprite_width * nb_hearts) - 10;
+	constant heart_sprite_y_start : integer := (v_active - (INFO_HEIGHT / 2) - heart_sprite_height);
+
+	constant nb2_sprite_x_start : integer := (h_active - nb2_sprite_width) / 2;
+	constant nb2_sprite_y_start : integer := (v_active - (INFO_HEIGHT / 2) - nb2_sprite_height);
+
+	signal heart_sprite_width_idx : integer range 0 to 32 := 0;
+
+	-- Memory addresses
+	signal adr_heart_sprite_save : std_logic_vector(9 downto 0) := (others => '0');
+	signal adr_heart_sprite : std_logic_vector(9 downto 0) := (others => '0');
+	signal color_heart_sprite : std_logic_vector(11 downto 0) := (others => '0');
+
+	signal adr_nb2_sprite : std_logic_vector(9 downto 0) := (others => '0');
+	signal color_nb2_sprite : std_logic_vector(11 downto 0) := (others => '0');
+
 
 begin
 	video_en <= horizontal_en AND vertical_en;
+
+	-- ROM instance
+	ROM_heart : entity work.ROM_COMP_HEART port map (
+		address => adr_heart_sprite,
+		clock => CLK_50,
+		q => color_heart_sprite
+	);
+
+	ROM_nb2 : entity work.ROM_COMP_NB2 port map (
+		address => adr_nb2_sprite,
+		clock => CLK_50,
+		q => color_nb2_sprite
+	);
 
 	B 		<=	CTRL(0);
 	YBT		<=	CTRL(1);
@@ -112,11 +155,6 @@ begin
 	
 	vga_square: process
 
-	variable map_size : integer range 0 to 250 := MAP_SIZE;
-	variable cell_size : integer range 0 to 100 := CELL_SIZE;
-
-	variable value_matrix : integer range 0 to 1 := 0;
-
 	variable player_x : integer range 0 to 800 := 35; -- Scaled by 10 to represent 3.5
 	variable player_y : integer range 0 to 700 := 35; -- Scaled by 10 to represent 3.5
 
@@ -129,32 +167,83 @@ begin
 			player_x := X; -- Get the player's X position from the player entity
 			player_y := Y; -- Get the player's Y position from the player entity
 
-
-			if ( (v_cnt >= v_back_porch + 10) AND (v_cnt <= v_back_porch + 500 - 10)
-				AND (h_cnt >= h_back_porch + 10) AND (h_cnt <= h_back_porch + h_active - 10)) then
+			-- raycast screen placeholder
+			if ( (v_cnt >= v_back_porch + SPACE_BORDER) AND (v_cnt <= v_back_porch + 500 - SPACE_BORDER)
+				AND (h_cnt >= h_back_porch + SPACE_BORDER) AND (h_cnt <= h_back_porch + h_active - SPACE_BORDER)) then
 				color <= "111100000000"; -- square color
 			end if;
 
-
-			for i in 0 to 6 loop
+			-- Display sprite nb2 at the center of the screen
+			if (v_cnt >= v_back_porch + nb2_sprite_y_start and v_cnt < v_back_porch + nb2_sprite_y_start + nb2_sprite_height and
+				h_cnt >= h_back_porch + nb2_sprite_x_start and h_cnt < h_back_porch + nb2_sprite_x_start + nb2_sprite_width) then
 				
-				for j in 0 to 7 loop
+				color <= color_nb2_sprite;
+
+				adr_nb2_sprite <= adr_nb2_sprite + 1;
+
+			end if;
+
+			
+			-- Draw the hearts
+			if ( (v_cnt >= v_back_porch + heart_sprite_y_start) AND (v_cnt <= v_back_porch + heart_sprite_y_start + heart_sprite_height - 1)
+				AND (h_cnt >= h_back_porch + heart_sprite_x_start) 
+				AND (h_cnt <= h_back_porch + heart_sprite_x_start + nb_hearts * heart_sprite_width - 1)) then
+
+					
+				if (heart_sprite_width_idx >= heart_sprite_width - 1) then
+					heart_sprite_width_idx <= 0;
+					adr_heart_sprite <= adr_heart_sprite_save;
+				end if;
+				if (heart_sprite_width_idx = 0) then
+					adr_heart_sprite_save <= adr_heart_sprite;
+				end if;
+
+				color <= color_heart_sprite;
+
+				adr_heart_sprite <= adr_heart_sprite + 1;
+
+				heart_sprite_width_idx <= heart_sprite_width_idx + 1;
+	
+			end if;
+
+			-- for heart_index in 0 to nb_hearts - 1 loop
+
+			-- 	if ( (v_cnt >= v_back_porch + heart_sprite_y_start) AND (v_cnt <= v_back_porch + heart_sprite_y_start + heart_sprite_height - 1)
+			-- 		AND (h_cnt >= h_back_porch + heart_sprite_x_start + 0 * heart_sprite_width) 
+			-- 		AND (h_cnt <= h_back_porch + heart_sprite_x_start + nb_hearts * heart_sprite_width - 1)) then
+
+			-- 		adr_heart_sprite_save <= adr_heart_sprite;
+					
+			-- 		for idx_heart_sprite_width in 0 to heart_sprite_width - 1 loop
+			-- 			color <= color_heart_sprite;
+
+			-- 			adr_heart_sprite <= adr_heart_sprite + 1;
+			-- 		end loop;
+			-- 		adr_heart_sprite <= adr_heart_sprite_save;
+			-- 	end if;
+
+			-- end loop;
+
+
+			for i in 0 to ROWS - 1 loop
+				
+				for j in 0 to COLS - 1 loop
 						--Generate square
 						-- v_cnt >= v_back_porch + x : starting vertical equals x pixels after the back porch, back porch is the "inactive" area before the active display area.
 						-- v_cnt <= v_back_porch + y : ending vertical equals y pixels after the back porch.
 						-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
 						-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
 						-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
-						if ( (v_cnt >= v_back_porch + 500 + i * cell_size) AND (v_cnt <= v_back_porch + 500 + cell_size  + i * cell_size)
-						AND (h_cnt >= h_back_porch + 10 + j * cell_size ) AND (h_cnt <= h_back_porch + 10 + cell_size + j * cell_size)) then
+						if ( (v_cnt >= v_back_porch + 500 + i * CELL_SIZE) AND (v_cnt <= v_back_porch + 500 + CELL_SIZE  + i * CELL_SIZE)
+						AND (h_cnt >= h_back_porch + SPACE_BORDER + j * CELL_SIZE ) AND (h_cnt <= h_back_porch + SPACE_BORDER + CELL_SIZE + j * CELL_SIZE)) then
 
 							color <= color_lut(INPUT_MATRIX_GRID(i,j)); -- Assign color based on the matrix value
 
 							-- Draw the player as a green circle
-							if ( (v_cnt >= v_back_porch + 500 + (player_y * cell_size) / 10 - cell_size / 2) AND 
-								 (v_cnt <= v_back_porch + 500 + (player_y * cell_size) / 10 + cell_size / 2) AND 
-								 (h_cnt >= h_back_porch + (player_x * cell_size) / 10 - cell_size / 2) AND 
-								 (h_cnt <= h_back_porch + (player_x * cell_size) / 10 + cell_size / 2) ) then
+							if ( (v_cnt >= v_back_porch + 500 + (player_y * CELL_SIZE) / 10 - CELL_SIZE / 2) AND 
+								 (v_cnt <= v_back_porch + 500 + (player_y * CELL_SIZE) / 10 + CELL_SIZE / 2) AND 
+								 (h_cnt >= h_back_porch + (player_x * CELL_SIZE) / 10 - CELL_SIZE / 2) AND 
+								 (h_cnt <= h_back_porch + (player_x * CELL_SIZE) / 10 + CELL_SIZE / 2) ) then
 								color <= "000011110000"; -- green
 							end if;
 						end if;
@@ -164,6 +253,7 @@ begin
 			end loop ; -- 	
 
 
+			-------------------------- VGA COMMUNICATION --------------------------
 
 			--Generate Horizontal Sync
 			-- h_length - h_sync_length = 1040 - 120 = 920, so when h_cnt is between 920 and 1039, h_sync is low (0).
@@ -233,5 +323,10 @@ begin
 			--Synchro
 			SYNC(1) <= h_sync;
 			SYNC(0) <= v_sync;
+
+			-- reset adr when h_cnt and v_cnt at end of screen
+			if (h_cnt >= h_length - 1) AND (v_cnt >= v_length - 1) then
+				adr_heart_sprite <= "0000000000";
+			end if;
 	end process vga_square;	
 end Behavioral;

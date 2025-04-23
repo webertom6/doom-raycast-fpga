@@ -38,8 +38,11 @@ architecture game_arch of vga1 is
 	signal player_x 		: integer range 0 to 80 := x0;
 	signal player_y 		: integer range 0 to 70 := y0;
 
-	constant map_size 		: integer range 0 to 250 := 200;
-	constant cell_size 	: integer range 0 to 100 := 14;
+    -- GRID SIZE AND CELL SIZE
+    constant rows           : integer range 0 to 7 := 7;
+    constant cols           : integer range 0 to 8 := 8;
+	constant grid_size 		: integer range 0 to 250 := 100;
+	constant cell_size 	    : integer range 0 to 100 := grid_size / rows;
 	-- Creates a row=7xcol=8 array for grid
 	signal grid : matrix_grid := (
 		(1, 1, 1, 1, 1, 1, 1, 1),
@@ -50,13 +53,21 @@ architecture game_arch of vga1 is
 		(1, 0, 0, 0, 0, 0, 0, 1),
 		(1, 1, 1, 1, 1, 1, 1, 1)
     );
+
+    -- SCREEN SIZE
+    constant space_border : integer range 0 to 100 := 10; -- 10px border
+    constant info_height : integer range 0 to 100 := 100; -- 10px info bar
 	
 begin
 	
 	vga_ent : entity work.game1
 	generic map(	
-				MAP_SIZE 		=> map_size,
-				CELL_SIZE 		=> cell_size
+                ROWS 			=> rows,
+                COLS 			=> cols,
+				GRID_SIZE 		=> grid_size,
+				CELL_SIZE 		=> cell_size,
+                SPACE_BORDER 	=> space_border,
+                INFO_HEIGHT 	=> info_height
 			)
 	port map(	CLK_50 	=> CLK_50,
 				RED 	=> RED,
