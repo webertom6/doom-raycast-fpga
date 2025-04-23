@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.std_logic_ARITH.ALL;
 use ieee.std_logic_UNSIGNED.ALL;
+use work.shared_types.all;
 
 entity vga1 is port
 	(
@@ -32,18 +33,39 @@ architecture game_arch of vga1 is
 	signal sclk_player 		: std_logic := '0';
 
 	--PLAYERS POSITIONS AND DIRECTIONS 
-	signal player_x : integer range 0 to 80 := 35;
-	signal player_y : integer range 0 to 70 := 35;
+	constant x0 			: integer range 0 to 80 := 35;
+	constant y0 			: integer range 0 to 70 := 35;
+	signal player_x 		: integer range 0 to 80 := x0;
+	signal player_y 		: integer range 0 to 70 := y0;
+
+	constant map_size 		: integer range 0 to 250 := 200;
+	constant cell_size 	: integer range 0 to 100 := 14;
+	-- Creates a row=7xcol=8 array for grid
+	signal grid : matrix_grid := (
+		(1, 1, 1, 1, 1, 1, 1, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 1, 1, 1, 1, 1, 1, 1)
+    );
 	
 begin
 	
 	vga_ent : entity work.game1
+	generic map(	
+				MAP_SIZE 		=> map_size,
+				CELL_SIZE 		=> cell_size
+			)
 	port map(	CLK_50 	=> CLK_50,
 				RED 	=> RED,
                 GREEN 	=> GREEN,
                 BLUE 	=> BLUE,
                 SYNC 	=> SYNC, 
 				CTRL 	=> ctrl1,
+
+				INPUT_MATRIX_GRID => grid,
 
 				X 			=> player_x,
 				Y 			=> player_y
@@ -63,6 +85,10 @@ begin
 				);
 
 	player_ent : entity work.player
+	generic map (
+		x0 => x0,
+		y0 => y0
+	)
 	port map(	CLK_PLAYER	=> CLK_PLAYER,
 				CTRL 		=> ctrl1,
 				X 			=> player_x,
