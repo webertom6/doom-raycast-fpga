@@ -4,7 +4,7 @@
 -- MODULE: altsyncram 
 
 -- ============================================================
--- File Name: ROM_COMP_NB2.vhd
+-- File Name: ROM_COMP_NB4.vhd
 -- Megafunction Name(s):
 -- 			altsyncram
 --
@@ -40,17 +40,17 @@ USE ieee.std_logic_1164.all;
 LIBRARY altera_mf;
 USE altera_mf.altera_mf_components.all;
 
-ENTITY ROM_COMP_NB2 IS
+ENTITY ROM_COMP_NB4 IS
 	PORT
 	(
 		address		: IN STD_LOGIC_VECTOR (9 DOWNTO 0);
 		clock		: IN STD_LOGIC  := '1';
 		q		: OUT STD_LOGIC_VECTOR (0 DOWNTO 0)
 	);
-END ROM_COMP_NB2;
+END ROM_COMP_NB4;
 
 
-ARCHITECTURE SYN OF rom_comp_nb2 IS
+ARCHITECTURE SYN OF rom_comp_nb4 IS
 
 	SIGNAL sub_wire0	: STD_LOGIC_VECTOR (0 DOWNTO 0);
 
@@ -62,7 +62,7 @@ BEGIN
 		address_aclr_a => "NONE",
 		clock_enable_input_a => "BYPASS",
 		clock_enable_output_a => "BYPASS",
-		init_file => "../mif_files/nb2.mif",
+		init_file => "../mif_files/nb4.mif",
 		intended_device_family => "Cyclone IV E",
 		lpm_hint => "ENABLE_RUNTIME_MOD=NO",
 		lpm_type => "altsyncram",
@@ -104,7 +104,7 @@ END SYN;
 -- Retrieval info: PRIVATE: JTAG_ENABLED NUMERIC "0"
 -- Retrieval info: PRIVATE: JTAG_ID STRING "NONE"
 -- Retrieval info: PRIVATE: MAXIMUM_DEPTH NUMERIC "0"
--- Retrieval info: PRIVATE: MIFfilename STRING "../mif_files/nb2.mif"
+-- Retrieval info: PRIVATE: MIFfilename STRING "../mif_files/nb4.mif"
 -- Retrieval info: PRIVATE: NUMWORDS_A NUMERIC "1024"
 -- Retrieval info: PRIVATE: RAM_BLOCK_TYPE NUMERIC "0"
 -- Retrieval info: PRIVATE: RegAddr NUMERIC "1"
@@ -119,7 +119,7 @@ END SYN;
 -- Retrieval info: CONSTANT: ADDRESS_ACLR_A STRING "NONE"
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_INPUT_A STRING "BYPASS"
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_A STRING "BYPASS"
--- Retrieval info: CONSTANT: INIT_FILE STRING "../mif_files/nb2.mif"
+-- Retrieval info: CONSTANT: INIT_FILE STRING "../mif_files/nb4.mif"
 -- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone IV E"
 -- Retrieval info: CONSTANT: LPM_HINT STRING "ENABLE_RUNTIME_MOD=NO"
 -- Retrieval info: CONSTANT: LPM_TYPE STRING "altsyncram"
@@ -136,9 +136,9 @@ END SYN;
 -- Retrieval info: CONNECT: @address_a 0 0 10 0 address 0 0 10 0
 -- Retrieval info: CONNECT: @clock0 0 0 0 0 clock 0 0 0 0
 -- Retrieval info: CONNECT: q 0 0 1 0 @q_a 0 0 1 0
--- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB2.vhd TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB2.inc FALSE
--- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB2.cmp TRUE
--- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB2.bsf FALSE
--- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB2_inst.vhd FALSE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB4.vhd TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB4.inc FALSE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB4.cmp TRUE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB4.bsf FALSE
+-- Retrieval info: GEN_FILE: TYPE_NORMAL ROM_COMP_NB4_inst.vhd FALSE
 -- Retrieval info: LIB_FILE: altera_mf

@@ -6,6 +6,8 @@ use work.shared_types.all;
 
 entity vga1 is port
 	(
+
+	CLK_TIMER	: buffer std_logic;
 	
 	CLK_PLAYER	: buffer std_logic := '0';		
 	
@@ -31,12 +33,17 @@ architecture game_arch of vga1 is
 	-- CLOCKS
 	signal sclk_snes 		: std_logic := '0';
 	signal sclk_player 		: std_logic := '0';
+	signal sclk_timer 		: std_logic := '0';
 
 	--PLAYERS POSITIONS AND DIRECTIONS 
 	constant x0 			: integer range 0 to 80 := 35;
 	constant y0 			: integer range 0 to 70 := 35;
 	signal player_x 		: integer range 0 to 80 := x0;
 	signal player_y 		: integer range 0 to 70 := y0;
+
+	-- TIMER SIGNALS
+	constant s0 			: integer range 0 to 600 := 0; -- 0 to 60 seconds
+	signal second 			: integer range 0 to 600 := s0;
 
     -- GRID SIZE AND CELL SIZE
     constant rows           : integer range 0 to 7 := 7;
@@ -78,6 +85,8 @@ begin
 
 				INPUT_MATRIX_GRID => grid,
 
+				SECOND 		=> second,
+
 				X 			=> player_x,
 				Y 			=> player_y
 			);
@@ -85,7 +94,8 @@ begin
 	clocks_ent : entity work.clocks
 	port map(	CLK_50 		=> CLK_50,
 				CLK_SNES 	=> CLK_SNES,
-				CLK_PLAYER 	=> CLK_PLAYER
+				CLK_PLAYER 	=> CLK_PLAYER,
+				CLK_TIMER 	=> CLK_TIMER
 				);
 
 	ctrl1_ent : entity work.snes
@@ -105,5 +115,14 @@ begin
 				X 			=> player_x,
 				Y 			=> player_y
 			);
+
+	timer_ent : entity work.timer
+	generic map (
+		s0 => s0
+	)
+	port map(	CLK_TIMER 	=> CLK_TIMER,
+				SECOND 		=> second
+			);
+
 
 end architecture game_arch;
