@@ -1,0 +1,252 @@
+library ieee;
+use ieee.std_logic_1164.ALL;
+use ieee.numeric_std.all;
+use work.shared_types.all;
+
+entity vga is port 
+	( 
+		vga_active  : in std_logic;
+		ray_index : in integer range 0 to 49;
+		-- DISPLAY SIGNALS
+		CLK_50 : in std_logic;	
+		RED: out std_logic_vector(3 downto 0);
+		GREEN: out std_logic_vector(3 downto 0);  
+		BLUE: out std_logic_vector(3 downto 0); 			
+		SYNC: out std_logic_vector(1 downto 0);
+
+		-- SNES CONTROLLER SIGNALS
+		CTRL : in std_logic_vector(11 downto 0);
+
+		-- PLAYER SIGNALS
+		X	: in signed(15 downto 0);
+		Y	: in  signed(15 downto 0);
+		DrawStart : in int_ray_array;
+		DrawEnd : in int_ray_array
+	);
+end vga;
+
+architecture Behavioral of vga is    
+    -- Sync Signals
+    -- h_sync and v_sync: Signals that synchronize the monitor's scanning process.
+    signal h_sync : std_logic;
+    signal v_sync : std_logic;
+    
+    -- Video Enables__
+    signal video_en : std_logic;
+    -- horizontal_en: Indicates whether the current pixel is in the active visible area of the screen (horizontally).
+    signal horizontal_en : std_logic;
+    -- vertical_en: Indicates whether the current pixel is in the active visible area of the screen (vertically).
+    signal vertical_en : std_logic;
+    
+    -- Color Signals
+    signal color : std_logic_vector(11 downto 0) := (others => '0');
+    
+    -- Sync Counters
+    -- h_cnt (Horizontal Counter): Keeps track of the horizontal position of the pixel being drawn.
+    signal h_cnt : unsigned(10 downto 0) := (others => '0');
+    -- v_cnt (Vertical Counter): Keeps track of the vertical position of the pixel being drawn.
+    signal v_cnt : unsigned(10 downto 0) := (others => '0');
+    
+    -- Horizontal timing constants
+    constant h_back_porch : integer := 64;
+    constant h_active : integer := 800;
+    constant h_front_porch : integer := 56;
+    -- h_sync_length (120): The number of pixels that the horizontal sync pulse is active (low).
+    constant h_sync_length : integer := 120;
+    -- h_length (1040): Total number of pixels per horizontal line, including visible pixels and blanking periods.
+    constant h_length : integer := 1040;
+    
+    -- Vertical timing constants
+    constant v_back_porch : integer := 23;
+    constant v_active : integer := 600;
+    constant v_front_porch : integer := 37;
+    constant v_sync_length : integer := 6;
+    -- v_length (666): Total number of lines per frame, including visible lines and blanking periods.
+    constant v_length : integer := 666;
+
+	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
+
+	-- Creates a row=7xcol=8 array for a number pad
+	type matrix_type is array (0 to 6, 0 to 7) of integer range 0 to 1;
+    signal my_matrix : matrix_type := (
+		(1, 1, 1, 1, 1, 1, 1, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 0, 1, 1, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 1, 0, 1, 0, 0, 1),
+		(1, 0, 0, 0, 0, 0, 0, 1),
+		(1, 1, 1, 1, 1, 1, 1, 1)
+    );
+
+	-- Creates a row=600xcol=800 array for a number pad
+	-- type matrix_type2 is array (0 to 599, 0 to 799) of integer range 0 to 1;
+	-- signal my_matrix2 : matrix_type2 := (
+	-- 	others => (others => 0)
+	-- );
+	
+
+begin
+	video_en <= horizontal_en AND vertical_en;
+
+	B 		<=	CTRL(0);
+	YBT		<=	CTRL(1);
+	SLCT	<=	CTRL(2);
+	STRT	<=	CTRL(3);
+	UP_CROSS		<=	CTRL(4);
+	DOWN_CROSS 	<=	CTRL(5);
+	LEFT_CROSS	<=	CTRL(6);
+	RIGHT_CROSS	<=	CTRL(7);
+	ABT		<=	CTRL(8);
+	XBT		<=	CTRL(9);
+	LBT		<=	CTRL(10);
+	RBT		<=	CTRL(11);
+	
+	vga_square: process
+
+	-- matrix printing variables
+	variable idx_row : integer range 0 to 4 := 0;
+	variable idx_col : integer range 0 to 3 := 0;
+	variable step_row : integer range 0 to 100 := 50;
+
+	variable map_size : integer range 0 to 250 := 100;
+	variable cell_size : integer range 0 to 100 := 14; -- map_size=100 / col=7 = 14.2857 = 14
+	variable ray_size : integer range 0 to 779 := 1; --screen size = 779 (horizontaly) / ray_size = 1
+	
+	variable value_matrix : integer range 0 to 1 := 0;
+
+	variable player_x : signed(15 downto 0) := (others => '0'); -- Scaled by 10 to represent 3.5
+	variable player_y : signed(15 downto 0) := (others => '0');-- Scaled by 10 to represent 3.5
+
+
+
+	begin
+		wait until rising_edge(CLK_50);
+		if (vga_active = '1') then
+
+				color <= "000000000000"; -- background color
+
+				player_x := X; -- Get the player's X position from the player entity
+				player_y := Y; -- Get the player's Y position from the player entity
+
+				--color <= "000000000000"; -- background color
+				-- color <= "111111111111"; -- background color
+
+				if ( (v_cnt >= v_back_porch + 10) AND (v_cnt <= v_back_porch + 500 - 10)
+					AND (h_cnt >= h_back_porch + 10) AND (h_cnt <= h_back_porch + h_active - 10)) then -- condition pour afficher le raycast
+						if (h_cnt >= h_back_porch + ray_index * ray_size) AND (h_cnt <= h_back_porch + (ray_index+1) * ray_size) then
+							if (v_cnt <= v_back_porch + 10 + DrawStart(ray_index)) then
+								color <= "111000000000"; -- ciel
+							elsif (v_cnt >= v_back_porch + 10 + DrawStart(ray_index) AND v_cnt <= v_back_porch + DrawEnd(ray_index) - 10) then
+								color <= "000000000011";  -- mur 
+							else 
+								color <= "000111111111";  --sol
+							end if;
+						end if;
+				end if;
+
+
+				for i in 0 to 6 loop
+					
+					for j in 0 to 7 loop
+							--Generate square
+							-- v_cnt >= v_back_porch + x : starting vertical equals x pixels after the back porch, back porch is the "inactive" area before the active display area.
+							-- v_cnt <= v_back_porch + y : ending vertical equals y pixels after the back porch.
+							-- h_cnt >= h_back_porch + x : starting horizontal equals x pixels after the back porch.
+							-- h_cnt <= h_back_porch + y : ending horizontal equals y pixels after the back porch.
+							-- The square is drawn in the active display area, which is between 64 and 863 pixels horizontally and 24 and 623 pixels vertically.
+							if ( (v_cnt >= v_back_porch + 500 + i * cell_size) AND (v_cnt <= v_back_porch + 500 + cell_size  + i * cell_size)
+							AND (h_cnt >= h_back_porch + 10 + j * cell_size ) AND (h_cnt <= h_back_porch + 10 + cell_size + j * cell_size)) then
+								-- Assign the value of the matrix to the variable value_matrix
+								-- value_matrix := my_matrix(i,j);
+								-- if (value_matrix = 1) then
+								if (my_matrix(i,j) = 0) then
+									color <= "000000000000"; -- red
+									else
+									color <= "111111111111"; -- green
+								end if;
+
+								-- Draw the player as a green circle
+								if ( (v_cnt >= v_back_porch + 500 + (to_integer(player_y)/256 * cell_size) / 10 - cell_size / 2) AND 
+									 (v_cnt <= v_back_porch + 500 + (to_integer(player_y)/256 * cell_size) / 10 + cell_size / 2) AND 
+									 (h_cnt >= h_back_porch + (to_integer(player_x)/256 * cell_size) / 10 - cell_size / 2) AND 
+									 (h_cnt <= h_back_porch + (to_integer(player_x)/256 * cell_size) / 10 + cell_size / 2) ) then
+									color <= "000011110000"; -- green
+								end if;
+							end if;
+						
+						end loop;
+					
+				end loop ; 	
+
+				--Generate Horizontal Sync
+				-- h_length - h_sync_length = 1040 - 120 = 920, so when h_cnt is between 920 and 1039, h_sync is low (0).
+				if (h_cnt <= h_length-1) AND (h_cnt >= h_length - h_sync_length) then
+					h_sync <= '0';
+				else
+					h_sync <= '1';
+				end if;
+
+				--Generate Vertical Sync
+				-- v_length - v_sync_length = 666 - 6 = 660, so when v_cnt is between 660 and 665, v_sync is low (0).
+				if (v_cnt <= v_length-1) AND (v_cnt >= v_length - v_sync_length) then
+					v_sync <= '0';
+				else
+					v_sync <= '1';
+				end if;
+
+				--Reset Horizontal Counter
+				-- The horizontal counter resets when it reaches 1039 (h_length - 1), meaning a new scanline begins
+				if (h_cnt = h_length - 1) then
+					h_cnt <= "00000000000";
+				else
+					h_cnt <= h_cnt + 1;
+				end if;
+
+				--Reset Vertical Counter
+				-- When both h_cnt and v_cnt reach their maximum values (1039 and 665, respectively), the frame resets (v_cnt = 0).
+				-- If only h_cnt reaches its max, it increments v_cnt to move to the next row.
+				if (v_cnt = v_length - 1) AND (h_cnt = h_length - 1) then
+					v_cnt <= "00000000000";
+				elsif (h_cnt = h_length - 1) then
+					v_cnt <= v_cnt + 1;
+				end if;
+
+				--Generate Horizontal Data
+				-- The active display area horizontally starts at pixel 63 and ends at 863.
+				-- When h_cnt is in this range, horizontal_en = '1', meaning pixels in this region are visible.
+				if (h_cnt >= 63 AND h_cnt <= 863) then
+					horizontal_en <= '1';
+				else
+					horizontal_en <= '0';
+				end if;
+
+				--Generate Vertical Data
+				-- The active display area horizontally starts at pixel 63 and ends at 863.
+				-- When h_cnt is in this range, horizontal_en = '1', meaning pixels in this region are visible.
+				if (v_cnt >= 24 AND v_cnt <= 623) then
+					vertical_en <= '1';
+				else
+					vertical_en <= '0';
+				end if;
+
+				--Assign pins to color VGA
+				RED(0) <= color(8) AND video_en;   --Red LSB
+				RED(1) <= color(9) AND video_en;
+				RED(2) <= color(10) AND video_en;
+				RED(3) <= color(11) AND video_en;  --Red MSB
+				GREEN(0) <= color(4) AND video_en; --Green LSB
+				GREEN(1) <= color(5) AND video_en;
+				GREEN(2) <= color(6) AND video_en;
+				GREEN(3) <= color(7) AND video_en; --Green MSB
+				BLUE(0) <= color(0) AND video_en;  --Blue LSB
+				BLUE(1) <= color(1) AND video_en;
+				BLUE(2) <= color(2) AND video_en;
+				BLUE(3) <= color(3) AND video_en;  --Blue MSB
+
+				--Synchro
+				SYNC(1) <= h_sync;
+				SYNC(0) <= v_sync;
+				
+			end if;
+	end process vga_square;	
+end Behavioral;
