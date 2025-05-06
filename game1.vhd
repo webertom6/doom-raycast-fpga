@@ -1,6 +1,5 @@
 library ieee;
 use ieee.std_logic_1164.ALL;
-use ieee.std_logic_ARITH.ALL;
 use ieee.std_logic_UNSIGNED.ALL;
 use ieee.numeric_std.ALL;
 use work.shared_types.all;
@@ -81,7 +80,9 @@ architecture Behavioral of game1 is
 	
 	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
 	
-    -- Color Signals
+	-- LUT for sin and cos functions
+    
+	 -- Color Signals
     signal color : std_logic_vector(11 downto 0) := (others => '0');
 
 	type color_lut_type is array (0 to 15) of std_logic_vector(11 downto 0);
@@ -114,54 +115,32 @@ architecture Behavioral of game1 is
 		end if;
 	end function;
 
-	-- Function to calculate the digits for time display without using modulo operator
-	-- function calculate_time_digits(seconds : integer) return std_logic_vector(15 downto 0) is
-	-- 	variable unity_seconds : integer := 0;
-	-- 	variable tens_seconds : integer := 0;
-	-- 	variable unity_minutes : integer := 0;
-	-- 	variable tens_minutes : integer := 0;
-	-- 	variable temp_seconds : integer := seconds;
-	-- 	variable result : std_logic_vector(15 downto 0);
-	-- begin
-	-- 	-- Calculate unity and tens of seconds
-	-- 	while temp_seconds >= 10 loop
-	-- 		temp_seconds := temp_seconds - 10;
-	-- 	end loop;
-	-- 	unity_seconds := temp_seconds;
+	function color12bit_to_vector(signal_in : std_logic_vector(11 downto 0)) return std_logic_vector is
+		variable first_4_bits : integer;
+		variable second_4_bits : integer;
+		variable last_4_bits : integer;
+		variable transformed_first : integer;
+		variable transformed_second : integer;
+		variable transformed_last : integer;
+		variable result_vector : std_logic_vector(11 downto 0);
+	begin
+		-- Extract the first 4 bits, second 4 bits, and last 4 bits
+		first_4_bits := to_integer(unsigned(signal_in(11 downto 8)));
+		second_4_bits := to_integer(unsigned(signal_in(7 downto 4)));
+		last_4_bits := to_integer(unsigned(signal_in(3 downto 0)));
 
-	-- 	temp_seconds := seconds;
-	-- 	while temp_seconds >= 60 loop
-	-- 		temp_seconds := temp_seconds - 60;
-	-- 	end loop;
-	-- 	while temp_seconds >= 10 loop
-	-- 		temp_seconds := temp_seconds - 10;
-	-- 		tens_seconds := tens_seconds + 1;
-	-- 	end loop;
+		-- Apply the transformations
+		transformed_first := first_4_bits * 17;
+		transformed_second := second_4_bits * 17;
+		transformed_last := last_4_bits * 17;
 
-	-- 	-- Calculate unity and tens of minutes
-	-- 	temp_seconds := seconds;
-	-- 	while temp_seconds >= 600 loop
-	-- 		temp_seconds := temp_seconds - 600;
-	-- 	end loop;
-	-- 	while temp_seconds >= 60 loop
-	-- 		temp_seconds := temp_seconds - 60;
-	-- 		unity_minutes := unity_minutes + 1;
-	-- 	end loop;
+		-- Reconstruct the 12-bit vector
+		result_vector := std_logic_vector(to_unsigned(transformed_first, 4)) &
+						 std_logic_vector(to_unsigned(transformed_second, 4)) &
+						 std_logic_vector(to_unsigned(transformed_last, 4));
 
-	-- 	temp_seconds := seconds;
-	-- 	while temp_seconds >= 600 loop
-	-- 		temp_seconds := temp_seconds - 600;
-	-- 		tens_minutes := tens_minutes + 1;
-	-- 	end loop;
-
-	-- 	-- Combine the results into a single std_logic_vector
-	-- 	result(3 downto 0)   := std_logic_vector(to_unsigned(unity_seconds, 4));
-	-- 	result(7 downto 4)   := std_logic_vector(to_unsigned(tens_seconds, 4));
-	-- 	result(11 downto 8)  := std_logic_vector(to_unsigned(unity_minutes, 4));
-	-- 	result(15 downto 12) := std_logic_vector(to_unsigned(tens_minutes, 4));
-
-	-- 	return result;
-	-- end function;
+		return result_vector;
+	end function;
 	
 	type timer_digits_array is array (3 downto 0) of integer range 0 to 9;
 	signal timer_digits : timer_digits_array;
@@ -183,6 +162,12 @@ architecture Behavioral of game1 is
 	constant digit_x_start : integer := (h_active - digit_width) / 2;
 	constant digit_y_start : integer := (v_active - (INFO_HEIGHT / 2) - digit_height);
 
+	-- GUN SPRITE DIMENSIONS
+	constant gun_frame_width  : integer := 67;
+	constant gun_frame_height : integer := 95;
+	constant gun_frame_x_start : integer := (h_active - gun_frame_width) / 2;
+	constant gun_frame_y_start : integer := (v_active - gun_frame_height) / 2;
+
 	-- Memory addresses
 	type array_adr_heart_type is array (0 to nb_hearts - 1) of std_logic_vector(9 downto 0);
 	type array_color_heart_type is array (0 to nb_hearts - 1) of std_logic_vector(11 downto 0);
@@ -197,6 +182,28 @@ architecture Behavioral of game1 is
 	signal digits_adr : digits_adr_type := (others => (others => (others => '0')));
 	signal digits_color : digits_color_type := (others => (others => (others => '0')));
 
+	signal adr_gun_frame_1 : std_logic_vector(12 downto 0) := (others => '0');
+	signal color_gun_frame_1: std_logic_vector(11 downto 0) := (others => '0');
+	signal adr_gun_frame_2 : std_logic_vector(12 downto 0) := (others => '0');
+	signal color_gun_frame_2: std_logic_vector(11 downto 0) := (others => '0');
+
+	signal adr_gun_frame_10 : std_logic_vector(12 downto 0) := (others => '0');
+	signal color_gun_frame_10: std_logic_vector(11 downto 0) := (others => '0');
+	-- signal adr_gun_frame_11 : std_logic_vector(12 downto 0) := (others => '0');
+	-- signal color_gun_frame_11: std_logic_vector(11 downto 0) := (others => '0');
+	-- signal adr_gun_frame_12 : std_logic_vector(12 downto 0) := (others => '0');
+	-- signal color_gun_frame_12: std_logic_vector(11 downto 0) := (others => '0');
+	-- signal adr_gun_frame_13 : std_logic_vector(12 downto 0) := (others => '0');
+	-- signal color_gun_frame_13: std_logic_vector(11 downto 0) := (others => '0');
+	-- signal adr_gun_frame_14 : std_logic_vector(12 downto 0) := (others => '0');
+	-- signal color_gun_frame_14: std_logic_vector(11 downto 0) := (others => '0');
+	-- signal adr_gun_frame_15 : std_logic_vector(12 downto 0) := (others => '0');
+	-- signal color_gun_frame_15: std_logic_vector(11 downto 0) := (others => '0');
+
+	signal flag_animation : std_logic := '0';
+
+	signal count_frame : integer range 0 to 1000 := 0;
+	signal count_frame_save : integer range 0 to 1000 := 0;
 
 begin
 	video_en <= horizontal_en AND vertical_en;
@@ -272,6 +279,54 @@ begin
 		);
 	end generate;
 
+	-- ROM_gun_frame : entity work.ROM_COMP_GUN port map (
+	-- 	address => adr_gun_frame,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame
+	-- );
+	ROM_gun_frame_1 : entity work.ROM_COMP_FRAME_1 port map (
+		address => adr_gun_frame_1,
+		clock => CLK_50,
+		q => color_gun_frame_1
+	);
+	ROM_gun_frame_2 : entity work.ROM_COMP_FRAME_2 port map (
+		address => adr_gun_frame_2,
+		clock => CLK_50,
+		q => color_gun_frame_2
+	);
+
+	ROM_gun_frame_10 : entity work.ROM_COMP_FRAME_10 port map (
+		address => adr_gun_frame_10,
+		clock => CLK_50,
+		q => color_gun_frame_10
+	);
+	-- ROM_gun_frame_11 : entity work.ROM_COMP_FRAME_11 port map (
+	-- 	address => adr_gun_frame_11,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame_11
+	-- );
+	-- ROM_gun_frame_12 : entity work.ROM_COMP_FRAME_12 port map (
+	-- 	address => adr_gun_frame_12,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame_12
+	-- );
+	-- ROM_gun_frame_13 : entity work.ROM_COMP_FRAME_13 port map (
+	-- 	address => adr_gun_frame_13,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame_13
+	-- );
+	-- ROM_gun_frame_14 : entity work.ROM_COMP_FRAME_14 port map (
+	-- 	address => adr_gun_frame_14,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame_14
+	-- );
+	-- ROM_gun_frame_15 : entity work.ROM_COMP_FRAME_15 port map (
+	-- 	address => adr_gun_frame_15,
+	-- 	clock => CLK_50,
+	-- 	q => color_gun_frame_15
+	-- );
+
+
 	B 		<=	CTRL(0);
 	YBT		<=	CTRL(1);
 	SLCT	<=	CTRL(2);
@@ -300,6 +355,7 @@ begin
 	variable player_y : integer range 0 to 700 := 35; -- Scaled by 10 to represent 3.5
 
 	variable time_digits : std_logic_vector(15 downto 0);
+
 	begin
 		wait until rising_edge(CLK_50);
 
@@ -312,17 +368,75 @@ begin
 			if ( (v_cnt >= v_back_porch + SPACE_BORDER) AND (v_cnt <= v_back_porch + 500 - SPACE_BORDER)
 				AND (h_cnt >= h_back_porch + SPACE_BORDER) AND (h_cnt <= h_back_porch + h_active - SPACE_BORDER)) then
 				
-				color <= color_lut(SECOND);
+				color <= color_lut(2);
 			end if;
+
+			if ( v_cnt >= v_back_porch + gun_frame_y_start AND v_cnt < v_back_porch + gun_frame_y_start + gun_frame_height
+				AND h_cnt >= h_back_porch + gun_frame_x_start AND h_cnt < h_back_porch + gun_frame_x_start + gun_frame_width) then
+				if (XBT = '1') AND flag_animation = '0' then
+					flag_animation <= '1';
+					count_frame_save <= count_frame;
+				
+				elsif flag_animation = '1' then
+					
+					if count_frame <= count_frame_save + 10 then
+						if color_gun_frame_10 /= "111111111111" then
+							color <= color_gun_frame_10;
+						end if;
+						adr_gun_frame_10 <= adr_gun_frame_10 + 1;
+					-- elsif count_frame = count_frame_save + 1 then
+					-- 	if color_gun_frame_11 /= "111111111111" then
+					-- 		color <= color_gun_frame_11;
+					-- 	end if;
+					-- 	adr_gun_frame_11 <= adr_gun_frame_11 + 1;
+					-- elsif count_frame = count_frame_save + 2 then
+					-- 	if color_gun_frame_12 /= "111111111111" then
+					-- 		color <= color_gun_frame_12;
+					-- 	end if;
+					-- 	adr_gun_frame_12 <= adr_gun_frame_12 + 1;
+					-- elsif count_frame = count_frame_save + 3 then
+					-- 	if color_gun_frame_13 /= "111111111111" then
+					-- 		color <= color_gun_frame_13;
+					-- 	end if;
+					-- 		adr_gun_frame_13 <= adr_gun_frame_13 + 1;
+					-- elsif count_frame = count_frame_save + 4 then
+					-- 	if color_gun_frame_14 /= "111111111111" then
+					-- 		color <= color_gun_frame_14;
+					-- 	end if;
+					-- 	adr_gun_frame_14 <= adr_gun_frame_14 + 1;
+					-- elsif count_frame = count_frame_save + 5 then
+					-- 	if color_gun_frame_15 /= "111111111111" then
+					-- 		color <= color_gun_frame_15;
+					-- 	end if;
+					-- 	adr_gun_frame_15 <= adr_gun_frame_15 + 1;
+					else
+						flag_animation <= '0';
+					end if;
+
+				elsif (RBT = '1') then
+					if color_gun_frame_2 /= "111111111111" then
+						color <= color_gun_frame_2;
+					end if;
+					adr_gun_frame_2 <= adr_gun_frame_2 + 1;
+
+				else
+					if color_gun_frame_1 /= "111111111111" then
+						color <= color_gun_frame_1;
+					end if;
+					adr_gun_frame_1 <= adr_gun_frame_1 + 1;
+				end if;
+			end if;
+
 
 			-- Draw the timer digits
 			for i in 0 to nb_digits - 1 loop
 				if (v_cnt >= v_back_porch + digit_y_start and v_cnt < v_back_porch + digit_y_start + digit_height and
 					h_cnt >= h_back_porch + digit_x_start + i * (digit_width + 10) and h_cnt < h_back_porch + digit_x_start + i * (digit_width + 10) + digit_width) then
 					
+						
+					-- Update the address for the digit sprite
 					color <= std_logic_to_vector(digits_color(timer_digits(i))(i)(0)); -- Assign color based on the digit value
 
-					-- Update the address for the digit sprite
 					digits_adr(timer_digits(i))(i) <= digits_adr(timer_digits(i))(i) + 1;
 				end if;
 			end loop;
@@ -361,7 +475,7 @@ begin
 								 (v_cnt <= v_back_porch + 500 + (player_y * CELL_SIZE) / 10 + CELL_SIZE / 2) AND 
 								 (h_cnt >= h_back_porch + (player_x * CELL_SIZE) / 10 - CELL_SIZE / 2) AND 
 								 (h_cnt <= h_back_porch + (player_x * CELL_SIZE) / 10 + CELL_SIZE / 2) ) then
-								color <= "000011110000"; -- green
+								color <= "111100101100"; -- green
 							end if;
 						end if;
 					
@@ -443,6 +557,12 @@ begin
 
 			-- reset adr when h_cnt and v_cnt at end of screen
 			if (h_cnt >= h_length - 1) AND (v_cnt >= v_length - 1) then
+
+				count_frame <= count_frame + 1;
+				if count_frame = 1000 then
+					count_frame <= 0;
+				end if;
+
 				for i in 0 to nb_hearts - 1 loop
 					adr_heart_sprite(i) <= "0000000000";
 				end loop;
@@ -451,6 +571,14 @@ begin
 						digits_adr(j)(i) <= "0000000000";
 					end loop;
 				end loop;
+				adr_gun_frame_1 <= "0000000000000";
+				adr_gun_frame_2 <= "0000000000000";
+				adr_gun_frame_10 <= "0000000000000";
+--				adr_gun_frame_11 <= "0000000000000";
+--				adr_gun_frame_12 <= "0000000000000";
+--				adr_gun_frame_13 <= "0000000000000";
+--				adr_gun_frame_14 <= "0000000000000";
+--				adr_gun_frame_15 <= "0000000000000";
 			end if;
 	end process vga_square;	
 end Behavioral;

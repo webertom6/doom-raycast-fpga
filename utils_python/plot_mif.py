@@ -6,9 +6,17 @@ import argparse
 def bin12_to_rgb888(bin_str):
     """Convert 12-bit RGB444 binary string to 8-bit RGB888 tuple."""
     value = int(bin_str, 2)
-    r = ((value >> 8) & 0xF) * 17
-    g = ((value >> 4) & 0xF) * 17
-    b = (value & 0xF) * 17
+    r = ((value >> 8) & 0xF)
+    g = ((value >> 4) & 0xF)
+    b = (value & 0xF)
+    
+    r = int(f"{r:04b}"[::-1], 2)
+    g = int(f"{g:04b}"[::-1], 2)
+    b = int(f"{b:04b}"[::-1], 2)
+    
+    r = r * 17
+    g = g * 17
+    b = b * 17
     return (r, g, b)
 
 def hex12_to_rgb888(hex_str):
