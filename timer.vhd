@@ -3,7 +3,7 @@ use ieee.std_logic_1164.ALL;
 use ieee.std_logic_ARITH.ALL;
 use ieee.std_logic_UNSIGNED.ALL;
 
-entity timer is 
+entity Timer is 
 generic(
 
 		s0 : integer range 0 to 600 -- 0 to 60 seconds
@@ -13,11 +13,12 @@ port(
 		
 		SECOND 	: out integer range 0 to 600 
 	);
-end entity timer;
+end entity Timer;
 
-architecture timer_arch of timer is
+architecture timer_arch of Timer is
 	--variables : 
 	signal s : integer range 0 to 600 := 0; -- 0 to 60 seconds
+    signal timer_cnt : integer range 0 to 50000000 := 0;
 begin
 		
 	timer : process ( CLK_TIMER )
