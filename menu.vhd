@@ -67,10 +67,8 @@ architecture Behavioral of menu is
 
     type string_array is array(natural range <>) of integer;
     constant title : string_array := (0, 1, 1, 2); -- DOOM
-    constant line1 : string_array := (10, 4, 5, 6, 7, 5, 10, 3, 10, 11, 8, 6, 12); -- START : PLAY
-    constant line2 : string_array := (10, 10, 4, 9, 8, 9, 13, 5, 10, 3, 10, 4, 5, 6, 5); -- SELECT : STATS
-	   constant line3 : string_array := (14, 9, 0, 1, 1, 2, 10, 0, 1, 1, 2, 10, 0, 1, 1, 2, 10, 0, 1, 1, 2, 4, 6, 1, 1, 11);
-
+    constant line1 : string_array := (11, 7, 9, 4, 4, 10, 4, 5, 6, 7, 5, 10, 5, 1, 10, 11, 8, 6, 12); -- PRESS START TO PLAY
+  
     procedure draw_text(
         constant str : in string_array;
         constant x_offset : in integer;
@@ -105,12 +103,10 @@ begin
     if rising_edge(CLK_50) then
         if (actif = '1') then
 			video_en <= horizontal_en AND vertical_en;
-			color <= "000000000111";
+			color <= "011001100110";
 
-            draw_text(title, 300, 100, 6, "111110000000", color);
-            draw_text(line1, 60, 200, 3, "000001111100", color);
-            draw_text(line2, 40, 270, 3, "000001111100", color);
-				draw_text(line3, 100, 400, 2, "111110000000", color);
+            draw_text(title, 300, 100, 8, "111110000000", color);
+            draw_text(line1, 150, 300, 3, "000001111100", color);
 
 			if (h_cnt <= h_length-1) AND (h_cnt >= h_length - h_sync_length) then
 				h_sync <= '0';
@@ -165,15 +161,15 @@ begin
 			SYNC(1) <= h_sync;
 			SYNC(0) <= v_sync;
 
-            if (CTRL(3) = '1' and prev_start = '0') then
+           if (CTRL(3) = '1' and prev_start = '0') then
                 start_pressed <= '1';
             else
                 start_pressed <= '0';
+					 prev_start <= CTRL(3);
             end if;
         else
             start_pressed <= '0';
         end if;
-        prev_start <= CTRL(3);
     end if;
 end process;
 
