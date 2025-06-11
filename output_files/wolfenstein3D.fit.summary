@@ -1,0 +1,16 @@
+Fitter Status : Successful - Sat May 10 13:31:46 2025
+Quartus Prime Version : 23.1std.1 Build 993 05/14/2024 SC Lite Edition
+Revision Name : wolfenstein3D
+Top-level Entity Name : wolfenstein3D
+Family : Cyclone IV E
+Device : EP4CE22F17C6
+Timing Models : Final
+Total logic elements : 16,734 / 22,320 ( 75 % )
+    Total combinational functions : 14,014 / 22,320 ( 63 % )
+    Dedicated logic registers : 7,823 / 22,320 ( 35 % )
+Total registers : 7823
+Total pins : 19 / 154 ( 12 % )
+Total virtual pins : 0
+Total memory bits : 158,369 / 608,256 ( 26 % )
+Embedded Multiplier 9-bit elements : 120 / 132 ( 91 % )
+Total PLLs : 0 / 4 ( 0 % )

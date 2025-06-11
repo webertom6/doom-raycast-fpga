@@ -1,0 +1,207 @@
+library ieee;
+use IEEE.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.SharedTypes.all;
+
+entity Raycast is port
+	(
+		CLK  : in std_logic;
+      GRID_MAP     : in matrix_grid;
+      posX         : in signed(31 downto 0):= "00000000000000111000000000000000";
+		posY     	 : in signed(31 downto 0):= "00000000000000111000000000000000";
+		dirX     	 : in signed(31 downto 0):= "00000000000000010000000000000000";
+		dirY     	 : in signed(31 downto 0):= "00000000000000000000000000000000";
+		planeX   	 : in signed(31 downto 0):= "00000000000000000000000000000000";
+		planeY   	 : in signed(31 downto 0):= "00000000000000001010100011110110";
+      rayDirX      : in signed(31 downto 0) := "00000000000110000000001110000000";
+      rayDirY      : in signed(31 downto 0) := "00000000000000010000000000000000";
+      wallHeight   : out integer;
+      HIT          : out std_logic;
+		computationFinished : out std_logic;
+		wakeUp		 : in std_logic := '1'
+    );
+end entity;
+
+architecture RaycastArch of Raycast is
+	constant HEIGHT : signed(31 downto 0) := "00000001111010100000000000000000";
+	type state_type is (IDLE, INIT, DDA, CHECK, FINISH, DIVIDE);
+   signal state : state_type := IDLE;
+	
+	type stateDiv_type is (First, Second, Third, FirstCheck, SecondCheck, ThirdCheck);
+	signal stateDiv : stateDiv_type := First;
+	
+	signal sideDistX : signed(31 downto 0)    := "00000000000000000000000000000000";
+	signal sideDistY : signed(31 downto 0)    := "00000000000000000000000000000000";
+	signal deltaDistX : signed(31 downto 0)   := "00000000000000000000000000000000";
+	signal deltaDistY : signed(31 downto 0)   := "00000000000000000000000000000000";
+	signal perpWallDist : signed(31 downto 0) := "00000000000000000000000000000000";
+		
+	signal stepX : integer := 0;
+	signal stepY : integer := 0;
+	signal mapX : integer := 0;
+	signal mapY : integer := 0;
+		
+	signal sideHit : std_logic := '0';
+	
+	signal initEnable   : std_logic := '0';
+	signal ddaEnable   : std_logic := '0';
+	signal checkEnable : std_logic := '0';
+	signal finished 	 : std_logic := '0';
+	
+	signal divOk     	 : std_logic := '0';
+	
+	signal invRayDirX : signed(31 downto 0);
+	signal invRayDirY : signed(31 downto 0);
+
+
+	function toFixedPoint(a: integer) return signed is
+		variable result: signed(31 downto 0);
+	begin
+		result := to_signed(a, 32);
+		result := shift_left(result, 16);
+		return result;
+	end;
+
+	signal inD1 : signed(31 downto 0);
+	signal inD2 : signed(31 downto 0);
+	signal outputD : signed(31 downto 0);
+	signal launchD  : std_logic := '0';
+	signal finishedD : std_logic := '0';
+
+begin
+	
+	DivEntity : entity work.Div
+	port map(CLK	  => CLK,
+				in1	  =>inD1,
+				in2	  =>inD2,
+				launch  =>launchD,
+				finished =>finishedD,
+				output  =>outputD
+				);
+	raycast: process(CLK)
+		variable temp : signed(31 downto 0) := "00000000000000000000000000000000";
+	begin
+		if(rising_edge(CLK)) then
+			case state is 
+				when IDLE =>
+					if wakeUp = '1' then
+						computationFinished <= '0';
+						sideDistX <= "00000000000000000000000000000000";
+						sideDistY <= "00000000000000000000000000000000";
+						deltaDistX <= "00000000000000000000000000000000";
+						deltaDistY <= "00000000000000000000000000000000";
+						perpWallDist <= "00000000000000000000000000000000";
+						stepX <= 0;
+						stepY <= 0;
+						sideHit <= '0';
+						mapX <= to_integer(posX(31 downto 16));
+						mapY <= to_integer(posY(31 downto 16));
+						
+						stateDiv <= First;
+						state <= DIVIDE;
+					end if;
+					
+				when DIVIDE =>
+					case stateDiv is
+						when First =>
+							inD1 <= to_signed(65536, 32);
+							inD2 <= rayDirX;
+							launchD <= '1';
+							stateDiv <= FirstCheck;
+						when Second =>
+							inD1 <= to_signed(65536, 32);
+							inD2 <= rayDirY;
+							launchD <= '1';
+							stateDiv <= SecondCheck;
+						when Third =>
+							inD1 <= HEIGHT;
+							inD2 <= perpWallDist;
+							launchD <= '1';
+							stateDiv <= ThirdCheck;
+							
+						when FirstCheck =>
+							if finishedD <= '1' then
+								launchD <= '0';
+								invRayDirX <= abs(outputD);
+								stateDiv <= Second;
+							end if;
+						when SecondCheck =>
+							if finishedD <= '1' then
+								launchD <= '0';
+								invRayDirY <= abs(outputD);
+								state <= INIT;
+							end if;
+						when ThirdCheck =>
+							if finishedD <= '1' then
+								launchD <= '0';
+								wallHeight <= to_integer(outputD(31 downto 16));
+								state <= FINISH;
+							end if;
+						end case;
+					
+				when INIT =>
+				
+					if rayDirX < 0 then
+						deltaDistX <= invRayDirX;
+						stepX <= -1;
+						temp := posX - toFixedPoint(mapX);
+						sideDistX <= fixedPointMul(temp, invRayDirX);
+					else
+						deltaDistX <= invRayDirX;
+						stepX <= 1;
+						temp := toFixedPoint(mapX + 1) - posX;
+						sideDistX <= fixedPointMul(temp, invRayDirX);
+					end if;
+						
+					if rayDirY < 0 then
+						deltaDistY <= invRayDirY;
+						stepY <= -1;
+						temp := posY - toFixedPoint(mapY);
+						sideDistY <= fixedPointMul(temp, invRayDirY);
+					else
+						deltaDistY <= invRayDirY;
+						stepY <= 1;
+						temp := toFixedPoint(mapY+1) - posY;
+						sideDistY <= fixedPointMul(temp, invRayDirY);
+					end if;
+					state <= DDA;
+				
+				when DDA =>
+					if sideDistX < sideDistY then
+						sideDistX <= sideDistX + deltaDistX;
+						mapX <= mapX + stepX;
+						sideHit <= '0';
+					else
+						sideDistY <= sideDistY + deltaDistY;
+						mapY <= mapY + stepY;
+						sideHit <= '1';
+					end if;
+					state <= CHECK;
+				
+				when CHECK =>
+					if GRID_MAP(mapX, mapY) > 0 then
+							if sideHit = '0' then
+								perpWallDist <= sideDistX - deltaDistX;
+							else
+								perpWallDist <= sideDistY - deltaDistY;
+							end if;
+							state <= FINISH;
+					else
+						state <= DDA;
+					end if;
+				
+				when FINISH =>
+					if divOK = '0' then
+						stateDiv <= Third;
+						state <= DIVIDE;
+						divOk <= '1';
+					else
+						HIT <= sideHit;
+						computationFinished <= '1';
+						state <= IDLE;
+					end if;
+				end case;
+			end if;
+	end process raycast;
+
+end architecture RaycastArch;

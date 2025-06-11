@@ -1,0 +1,113 @@
+------------------------------------------------------------
+Timing Analyzer Summary
+------------------------------------------------------------
+
+Type  : Slow 1200mV 85C Model Setup 'CLK_50'
+Slack : -26.273
+TNS   : -53440.222
+
+Type  : Slow 1200mV 85C Model Setup 'Clocks:clocks_ent|sclk_timer'
+Slack : -1.450
+TNS   : -14.500
+
+Type  : Slow 1200mV 85C Model Setup 'Clocks:clocks_ent|sclk_snes'
+Slack : -1.222
+TNS   : -5.480
+
+Type  : Slow 1200mV 85C Model Hold 'CLK_50'
+Slack : 0.294
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'Clocks:clocks_ent|sclk_snes'
+Slack : 0.357
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Hold 'Clocks:clocks_ent|sclk_timer'
+Slack : 0.586
+TNS   : 0.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'CLK_50'
+Slack : -3.000
+TNS   : -8768.038
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_snes'
+Slack : -1.000
+TNS   : -11.000
+
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_timer'
+Slack : -1.000
+TNS   : -10.000
+
+Type  : Slow 1200mV 0C Model Setup 'CLK_50'
+Slack : -23.469
+TNS   : -46869.669
+
+Type  : Slow 1200mV 0C Model Setup 'Clocks:clocks_ent|sclk_timer'
+Slack : -1.207
+TNS   : -12.070
+
+Type  : Slow 1200mV 0C Model Setup 'Clocks:clocks_ent|sclk_snes'
+Slack : -1.020
+TNS   : -3.961
+
+Type  : Slow 1200mV 0C Model Hold 'CLK_50'
+Slack : 0.286
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'Clocks:clocks_ent|sclk_snes'
+Slack : 0.313
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Hold 'Clocks:clocks_ent|sclk_timer'
+Slack : 0.528
+TNS   : 0.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'CLK_50'
+Slack : -3.000
+TNS   : -8766.988
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_snes'
+Slack : -1.000
+TNS   : -11.000
+
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_timer'
+Slack : -1.000
+TNS   : -10.000
+
+Type  : Fast 1200mV 0C Model Setup 'CLK_50'
+Slack : -14.338
+TNS   : -28603.945
+
+Type  : Fast 1200mV 0C Model Setup 'Clocks:clocks_ent|sclk_timer'
+Slack : -0.352
+TNS   : -3.520
+
+Type  : Fast 1200mV 0C Model Setup 'Clocks:clocks_ent|sclk_snes'
+Slack : -0.309
+TNS   : -0.416
+
+Type  : Fast 1200mV 0C Model Hold 'CLK_50'
+Slack : 0.149
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'Clocks:clocks_ent|sclk_snes'
+Slack : 0.186
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Hold 'Clocks:clocks_ent|sclk_timer'
+Slack : 0.315
+TNS   : 0.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'CLK_50'
+Slack : -3.000
+TNS   : -8704.071
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_snes'
+Slack : -1.000
+TNS   : -11.000
+
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'Clocks:clocks_ent|sclk_timer'
+Slack : -1.000
+TNS   : -10.000
+
+------------------------------------------------------------

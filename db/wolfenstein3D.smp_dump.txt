@@ -1,0 +1,26 @@
+
+State Machine - |wolfenstein3D|stateRay
+Name stateRay.COPY stateRay.COMPUTE stateRay.START 
+stateRay.START 0 0 0 
+stateRay.COMPUTE 0 1 1 
+stateRay.COPY 1 0 1 
+
+State Machine - |wolfenstein3D|state_playing
+Name state_playing.COMPUTE_RAY state_playing.COMPUTE_DIRECTION state_playing.IDLE 
+state_playing.IDLE 0 0 0 
+state_playing.COMPUTE_DIRECTION 0 1 1 
+state_playing.COMPUTE_RAY 1 0 1 
+
+State Machine - |wolfenstein3D|raycast:RayEntity|state
+Name state.PERPWALLDIV_WAIT state.PERPWALLDIV_INIT state.CALCRAY2_WAIT state.CALCRAY2_INIT state.CALCRAY1_WAIT state.CALCRAY1_INIT state.FINISH state.CHECK state.DDA state.INIT state.IDLE 
+state.IDLE 0 0 0 0 0 0 0 0 0 0 0 
+state.INIT 0 0 0 0 0 0 0 0 0 1 1 
+state.DDA 0 0 0 0 0 0 0 0 1 0 1 
+state.CHECK 0 0 0 0 0 0 0 1 0 0 1 
+state.FINISH 0 0 0 0 0 0 1 0 0 0 1 
+state.CALCRAY1_INIT 0 0 0 0 0 1 0 0 0 0 1 
+state.CALCRAY1_WAIT 0 0 0 0 1 0 0 0 0 0 1 
+state.CALCRAY2_INIT 0 0 0 1 0 0 0 0 0 0 1 
+state.CALCRAY2_WAIT 0 0 1 0 0 0 0 0 0 0 1 
+state.PERPWALLDIV_INIT 0 1 0 0 0 0 0 0 0 0 1 
+state.PERPWALLDIV_WAIT 1 0 0 0 0 0 0 0 0 0 1 

@@ -1,0 +1,184 @@
+library ieee;
+use ieee.std_logic_1164.ALL;
+use ieee.std_logic_UNSIGNED.ALL;
+use ieee.numeric_std.ALL;
+use work.SharedTypes.all;
+
+entity Vga is 
+port(   
+        CLK_50	:	in std_logic;
+
+        CTRL 		: in std_logic_vector(11 downto 0); -- SNES commands
+
+        -- Raycasting signals
+        wallHeightDraw : in int_array;
+        HITDraw : in std_logic_vector(63 downto 0);
+
+        --VGA port
+        RED		: out std_logic_vector(3 downto 0);
+        GREEN	: out std_logic_vector(3 downto 0);
+        BLUE	: out std_logic_vector(3 downto 0);
+        SYNC	: out std_logic_vector(1 downto 0)
+    );
+end entity Vga;
+
+architecture VgaArch of Vga is
+
+    --display signals
+    signal h_sync 			: std_logic;
+    signal v_sync 			: std_logic;
+
+    signal video_en 		: std_logic;
+    signal horizontal_en 	: std_logic;
+    signal vertical_en 		: std_logic;
+
+    signal color : std_logic_vector(11 downto 0) := (others => '0');
+
+    signal h_cnt : std_logic_vector(10 downto 0) := (others => '0');
+    signal v_cnt : std_logic_vector(10 downto 0) := (others => '0');
+
+    constant h_back_porch 	: integer := 64;
+    constant h_active 		: integer := 800;
+    constant h_front_porch 	: integer := 56;
+    constant h_sync_length 	: integer := 120;
+    constant h_length 		: integer := 1040;
+
+    constant v_back_porch 	: integer := 23;
+    constant v_active 		: integer := 600;
+    constant v_front_porch 	: integer := 37;
+    constant v_sync_length 	: integer := 6;
+    constant v_length 		: integer := 666;
+
+	signal B , YBT, SLCT, STRT, UP_CROSS, DOWN_CROSS, LEFT_CROSS, RIGHT_CROSS, ABT, XBT, LBT, RBT : std_logic;
+	
+begin
+    video_en <= horizontal_en AND vertical_en;
+
+    B 		<=	CTRL(0);
+    YBT		<=	CTRL(1);
+    SLCT	<=	CTRL(2);
+    STRT	<=	CTRL(3);
+    UP_CROSS		<=	CTRL(4);
+    DOWN_CROSS 	<=	CTRL(5);
+    LEFT_CROSS	<=	CTRL(6);
+    RIGHT_CROSS	<=	CTRL(7);
+    ABT		<=	CTRL(8);
+    XBT		<=	CTRL(9);
+    LBT		<=	CTRL(10);
+    RBT		<=	CTRL(11);
+
+
+    draw: process(CLK_50)
+        variable i              : integer := 0;
+        variable region_start   : integer := 0;
+        variable region_end     : integer := 0;
+        variable v_center       : integer := 0;
+        variable v_top          : integer := 0;
+        variable v_bottom       : integer := 0;
+    begin
+
+        if rising_edge(CLK_50) then
+            ----- VGA COMMUNICATION -----
+
+            if (UP_CROSS = '1') then
+                color <= "111111111111";
+            else
+                color <= "111100000000"; 
+            end if;
+                
+            ----- GIVE COLOR TO THE PIXEL -----
+            if (v_cnt >= v_back_porch + 10) and (v_cnt <= v_back_porch + 512 + 10) and (h_cnt >= h_back_porch + 10) and (h_cnt <= h_back_porch + h_active - 10) then
+                i := to_integer(unsigned(h_cnt - h_back_porch)) / ((h_active-20) / 64);
+                if (i >= 0) and (i < 64) then
+                    region_start := h_back_porch + i * ((h_active-20) / 64);
+                    region_end := region_start + ((h_active-20) / 64);
+                    if (h_cnt >= region_start) and (h_cnt < region_end) then
+                        v_center := v_back_porch + 10 + 256;
+                        v_top := v_center - wallHeightDraw(i)/2;
+                        v_bottom := v_center + wallHeightDraw(i)/2;
+                        if v_cnt < v_top then
+                            color <= "000000001111"; -- Top region
+                        elsif v_cnt < v_bottom then
+                            if HITDraw(i) = '0' then
+                                color <= "000011110000"; -- Wall body
+                            else
+                                color <= "000011000000";
+                            end if;
+                        else
+                            color <= "000000000000"; -- Bottom region
+                        end if;
+                    end if;
+                end if;
+            end if;
+            
+            --Generate Horizontal Sync
+            -- h_length - h_sync_length = 1040 - 120 = 920, so when h_cnt is between 920 and 1039, h_sync is low (0).
+            if (h_cnt <= h_length-1) AND (h_cnt >= h_length - h_sync_length) then
+                h_sync <= '0';
+            else
+                h_sync <= '1';
+            end if;
+
+            --Generate Vertical Sync
+            -- v_length - v_sync_length = 666 - 6 = 660, so when v_cnt is between 660 and 665, v_sync is low (0).
+            if (v_cnt <= v_length-1) AND (v_cnt >= v_length - v_sync_length) then
+                v_sync <= '0';
+            else
+                v_sync <= '1';
+            end if;
+
+            --Reset Horizontal Counter
+            -- The horizontal counter resets when it reaches 1039 (h_length - 1), meaning a new scanline begins
+            if (h_cnt = h_length - 1) then
+                h_cnt <= "00000000000";
+            else
+                h_cnt <= h_cnt + 1;
+            end if;
+
+            --Reset Vertical Counter
+            -- When both h_cnt and v_cnt reach their maximum values (1039 and 665, respectively), the frame resets (v_cnt = 0).
+            -- If only h_cnt reaches its max, it increments v_cnt to move to the next row.
+            if (v_cnt = v_length - 1) AND (h_cnt = h_length - 1) then
+                v_cnt <= "00000000000";
+            elsif (h_cnt = h_length - 1) then
+                v_cnt <= v_cnt + 1;
+            end if;
+
+            --Generate Horizontal Data
+            -- The active display area horizontally starts at pixel 63 and ends at 863.
+            -- When h_cnt is in this range, horizontal_en = '1', meaning pixels in this region are visible.
+            if (h_cnt >= 63 AND h_cnt <= 863) then
+                horizontal_en <= '1';
+            else
+                horizontal_en <= '0';
+            end if;
+
+            --Generate Vertical Data
+            -- The active display area horizontally starts at pixel 63 and ends at 863.
+            -- When h_cnt is in this range, horizontal_en = '1', meaning pixels in this region are visible.
+            if (v_cnt >= 24 AND v_cnt <= 623) then
+                vertical_en <= '1';
+            else
+                vertical_en <= '0';
+            end if;
+
+            --Assign pins to color VGA
+            RED(0) <= color(8) AND video_en;   --Red LSB
+            RED(1) <= color(9) AND video_en;
+            RED(2) <= color(10) AND video_en;
+            RED(3) <= color(11) AND video_en;  --Red MSB
+            GREEN(0) <= color(4) AND video_en; --Green LSB
+            GREEN(1) <= color(5) AND video_en;
+            GREEN(2) <= color(6) AND video_en;
+            GREEN(3) <= color(7) AND video_en; --Green MSB
+            BLUE(0) <= color(0) AND video_en;  --Blue LSB
+            BLUE(1) <= color(1) AND video_en;
+            BLUE(2) <= color(2) AND video_en;
+            BLUE(3) <= color(3) AND video_en;  --Blue MSB
+
+            --Synchro
+            SYNC(1) <= h_sync;
+            SYNC(0) <= v_sync;
+        end if;
+    end process draw;
+end architecture VgaArch;

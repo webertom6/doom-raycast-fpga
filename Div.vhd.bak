@@ -1,0 +1,55 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity Div is
+    port (
+        CLK      : in  std_logic;
+        in1      : in  signed(31 downto 0); 
+        in2      : in  signed(31 downto 0);
+        launch   : in  std_logic;
+        finished : out std_logic;
+        output   : out signed(31 downto 0)
+    );
+end entity Div;
+
+architecture DivArch of Div is
+    type StateType is (IDLE, RUNNING, DONE);
+    signal state : StateType := IDLE;
+
+    signal dividend : signed(63 downto 0);
+    signal divisor  : signed(63 downto 0);
+    signal result   : signed(63 downto 0);
+begin
+
+    process(CLK)
+    begin
+        if rising_edge(CLK) then
+            case state is
+                when IDLE =>
+                    finished <= '0';
+                    if launch = '1' then
+                        dividend <= shift_left(resize(in1, 64), 16);
+                        divisor  <= resize(in2, 64);
+                        state <= RUNNING;
+                    end if;
+
+                when RUNNING =>
+                    if divisor /= 0 then
+                        result <= dividend / divisor;
+                    else
+                        result <= "0111111111111111111111111111111111111111111111111111111111111111";
+                    end if;
+                    state <= DONE;
+
+                when DONE =>
+                    output <= resize(result, 32);
+                    finished <= '1';
+                    if launch = '0' then
+                        state <= IDLE;
+                    end if;
+            end case;
+        end if;
+    end process;
+
+end architecture DivArch;

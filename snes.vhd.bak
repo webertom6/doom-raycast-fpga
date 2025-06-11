@@ -1,0 +1,42 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity Snes is port
+	(
+	CLK		: in std_logic;
+	DATA		: in std_logic;
+	
+	LATCH		: out std_logic := '0';
+	CTRL 	   : out std_logic_vector(11 downto 0) := "000000000000"
+	);
+end entity Snes;
+
+architecture SnesArch of Snes is
+	--signals
+	signal count : integer range 0 to 16 := 0;
+	signal counter : integer range 0 to 300 := 0;
+	
+begin
+	snes: process(CLK)
+	begin 
+		if(rising_edge(CLK)) then
+			if counter >= 299 then
+				if (count >= 15) then
+					LATCH <= '1';
+					count <= 0;
+				else
+					LATCH <= '0';
+					if (count <= 11)then
+						CTRL(count) <= NOT DATA;
+					end if;
+					count <= count + 1;
+				end if;
+				counter <= 0;
+			else
+				counter <= counter + 1;
+			end if;
+			
+		end if;
+	end process snes;
+	
+end architecture SnesArch;
