@@ -1,6 +1,6 @@
 # doom-raycast-fpga
 
-Implementation a retro-like FPV (First Person View) game with 2D dynamics but with a 3D rendering using ray casting engine like in the video game [Wolfenstein3D](https://fr.wikipedia.org/wiki/Wolfenstein)
+Implementation a retro-like FPV (First Person View) game with 2D dynamics but with a 3D rendering using ray casting engine like in the video game [Wolfenstein3D](https://fr.wikipedia.org/wiki/Wolfenstein) in collaboration with [Juline Boniver](https://github.com/julien439) and Quentin Rulmont.
 
 ![GIF DOOM test](./report/doom.gif)
 
